@@ -34,6 +34,7 @@ module.exports = function Launchpad(opts){
   opts.scheduler.on('data', function(schedule){
     if (Math.floor(schedule.from*10) > Math.floor(lastPosition*10)){
       self.loopPosition.set(Math.floor(schedule.from) % self.loopLength())
+      lastPosition = schedule.from
     }
   })
 
