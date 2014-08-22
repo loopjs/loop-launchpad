@@ -55,7 +55,7 @@ module.exports = function Launchpad(opts){
   var buttons = ControlButtons(self, duplexPort)
   var repeatButtons = RepeatButtons(self, duplexPort)
 
-  var controllerGrid = ControllerGrid(self, {
+  var controllerGrid = self.controllerGrid = ControllerGrid(self, {
     duplexPort: duplexPort, 
     triggerOutput: triggerOutput,
     scheduler: opts.scheduler,
