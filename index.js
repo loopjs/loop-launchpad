@@ -9,7 +9,7 @@ var Selector = require('./lib/selector')
 var Mover = require('./lib/mover')
 var Suppressor = require('./lib/suppressor')
 
-var stateLights = require('./lib/state_lights')
+var stateLights = require('./state-lights')
 var ControllerGrid = require('./lib/controller-grid')
 var RepeatButtons = require('./lib/repeat-buttons')
 var ControlButtons = require('./lib/control-buttons')
