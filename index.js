@@ -48,13 +48,13 @@ module.exports = function Launchpad(opts){
     player: opts.player
   })
 
-  var inputStack = controllerGrid.inputStack
+  var inputGrabber = controllerGrid.inputGrabber
   var layers = controllerGrid.layers
 
-  var repeater = Repeater(inputStack, self)
+  var repeater = Repeater(inputGrabber, self)
   var holder = Holder(self)
-  var selector = Selector(inputStack, self.selection, layers.selection, stateLights.green)
-  var mover = Mover(self, inputStack)
+  var selector = Selector(inputGrabber, self.selection, layers.selection, stateLights.green)
+  var mover = Mover(self, inputGrabber)
   var suppressor = Suppressor(self, layers.suppressing, stateLights.red)
 
   self.setMidi = function(port){
