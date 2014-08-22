@@ -22,12 +22,26 @@ module.exports = function Launchpad(opts){
   var duplexPort = Switcher()
   var triggerOutput = opts.triggerOutput
 
+  var noRepeat = ObservArray([])
+
   var self = LoopGrid(opts, {
     repeatLength: Observ(2),
     loopLength: Observ(8),
     selection: ObservArray([]),
     recording: ObservArray([]),
     loopPosition: Observ()
+  })
+
+  self.flags(function(flags){
+    var noRepeatIndexes = []
+    flags.data.forEach(function(val, i){
+      if (val){
+        if (~val.indexOf('noRepeat')){
+          noRepeatIndexes.push(i)
+        }
+      }
+    })
+    updateArray(noRepeat, noRepeatIndexes)
   })
 
   var lastPosition = -1
@@ -51,7 +65,7 @@ module.exports = function Launchpad(opts){
   var inputGrabber = controllerGrid.inputGrabber
   var layers = controllerGrid.layers
 
-  var repeater = Repeater(inputGrabber, self)
+  var repeater = Repeater(inputGrabber, self, noRepeat)
   var holder = Holder(self)
   var selector = Selector(inputGrabber, self.selection, layers.selection, stateLights.green)
   var mover = Mover(self, inputGrabber)
@@ -173,4 +187,11 @@ module.exports = function Launchpad(opts){
   })
 
   return self
+}
+
+function updateArray(obs, value){
+  obs.transaction(function(rawList){
+    rawList.length = 0
+    Array.prototype.push.apply(rawList, value)
+  })
 }
