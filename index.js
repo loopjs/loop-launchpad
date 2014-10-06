@@ -1,5 +1,4 @@
 var LoopGrid = require('loop-grid')
-var Switcher = require('switch-stream')
 var Observ = require('observ')
 var ObservArray = require('observ-array')
 
@@ -14,25 +13,28 @@ var ControllerGrid = require('./lib/controller-grid')
 var RepeatButtons = require('./lib/repeat-buttons')
 var ControlButtons = require('./lib/control-buttons')
 
+var computed = require('observ/computed')
+
+var PortHolder = require('./port-holder')
+
 module.exports = function Launchpad(opts){
 
-  opts = opts || {}
+  var opts = Object.create(opts)
   opts.shape = [8, 8]
 
-  var duplexPort = Switcher()
+  var portHolder = PortHolder(opts)
+  var duplexPort = portHolder.stream
   var triggerOutput = opts.triggerOutput
 
-  var noRepeat = ObservArray([])
-
-  var self = LoopGrid(opts, {
-    repeatLength: Observ(2),
-    loopLength: Observ(8),
-    selection: ObservArray([]),
-    recording: ObservArray([]),
-    loopPosition: Observ()
+  duplexPort.on('switch', function(){
+    duplexPort.write([176, 0, 0])
   })
 
-  self.flags(function(flags){
+  var self = LoopGrid(opts, {
+    port: portHolder
+  })
+
+  var noRepeat = computed([self.flags], function(flags){
     var noRepeatIndexes = []
     flags.data.forEach(function(val, i){
       if (val){
@@ -41,8 +43,15 @@ module.exports = function Launchpad(opts){
         }
       }
     })
-    updateArray(noRepeat, noRepeatIndexes)
+    return noRepeatIndexes
   })
+
+
+  self.repeatLength = Observ(2)
+  self.loopLength = Observ(8)
+  self.selection = ObservArray([])
+  self.recording = ObservArray([]),
+  self.loopPosition = Observ()
 
   var lastPosition = -1
   opts.scheduler.on('data', function(schedule){
@@ -70,17 +79,6 @@ module.exports = function Launchpad(opts){
   var selector = Selector(inputGrabber, self.selection, layers.selection, stateLights.green)
   var mover = Mover(self, inputGrabber)
   var suppressor = Suppressor(self, layers.suppressing, stateLights.red)
-
-  self.setMidi = function(port){
-    if (port){
-      duplexPort.set(port)
-      // clear lights
-      duplexPort.write([176, 0, 0])
-      duplexPort.emit('switch')
-    }
-  }
-
-  self.setMidi(opts.midi)
 
   var learnMode = 'store'
   var recordingNotes = []
