@@ -13,6 +13,8 @@ var ControllerGrid = require('./lib/controller-grid')
 var RepeatButtons = require('./lib/repeat-buttons')
 var ControlButtons = require('./lib/control-buttons')
 
+var ObservStruct = require('observ-struct')
+
 var computed = require('observ/computed')
 
 var PortHolder = require('./port-holder')
@@ -52,6 +54,26 @@ module.exports = function Launchpad(opts){
   self.selection = ObservArray([])
   self.recording = ObservArray([]),
   self.loopPosition = Observ()
+
+  // for binding to visual interface
+  self.gridState = computed([
+    controller.grid, controller.selection, controller.playing, controller.recording, controller.flags
+  ], function(grid, selection, playing, recording, flags){
+    var length = grid.data.length
+    var result = []
+    for (var i=0;i<length;i++){
+      if (grid.data[i]){
+        result = {
+          id: grid.data[i],
+          isPlaying: playing.data[i],
+          isSelected: !!~selection.indexOf(i),
+          isRecording: !!~recording.indexOf(i),
+          flags: flags.data[i]
+        }
+      }
+    }
+    return result
+  })
 
   var lastPosition = -1
   opts.scheduler.on('data', function(schedule){
