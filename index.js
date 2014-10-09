@@ -1,6 +1,7 @@
 var LoopGrid = require('loop-grid')
 var Observ = require('observ')
 var ObservArray = require('observ-array')
+var ArrayGrid = require('array-grid')
 
 var Repeater = require('./lib/repeater')
 var Holder = require('./lib/holder')
@@ -57,22 +58,26 @@ module.exports = function Launchpad(opts){
 
   // for binding to visual interface
   self.gridState = computed([
-    controller.grid, controller.selection, controller.playing, controller.recording, controller.flags
-  ], function(grid, selection, playing, recording, flags){
+    self.grid, self.selection, self.playing, self.active, self.recording, noRepeat
+  ], function(grid, selection, playing, active, recording, noRepeat){
     var length = grid.data.length
     var result = []
     for (var i=0;i<length;i++){
       if (grid.data[i]){
-        result = {
+        result[i] = {
           id: grid.data[i],
           isPlaying: playing.data[i],
-          isSelected: !!~selection.indexOf(i),
-          isRecording: !!~recording.indexOf(i),
-          flags: flags.data[i]
+          isActive: active.data[i],
+          isSelected: inArray(selection, i),
+          isRecording: inArray(recording, i),
+          noRepeat: inArray(noRepeat, i)
         }
       }
     }
-    return result
+    return {
+      grid: ArrayGrid(result, grid.shape, grid.stride),
+      chunks: self.chunkState()
+    }
   })
 
   var lastPosition = -1
@@ -214,4 +219,9 @@ function updateArray(obs, value){
     rawList.length = 0
     Array.prototype.push.apply(rawList, value)
   })
+}
+
+
+function inArray(array, value){
+  return Array.isArray(array) && !!~array.indexOf(value)
 }
