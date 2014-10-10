@@ -29,9 +29,12 @@ module.exports = function Launchpad(opts){
   var duplexPort = portHolder.stream
   var triggerOutput = opts.triggerOutput
 
-  duplexPort.on('switch', function(){
+  duplexPort.on('switch', turnOffAllLights)
+
+  function turnOffAllLights(){
     duplexPort.write([176, 0, 0])
-  })
+  }
+
 
   var self = LoopGrid(opts, {
     port: portHolder
@@ -81,12 +84,14 @@ module.exports = function Launchpad(opts){
   })
 
   var lastPosition = -1
-  opts.scheduler.on('data', function(schedule){
+  opts.scheduler.on('data', onSchedule)
+
+  function onSchedule(schedule){
     if (Math.floor(schedule.from*10) > Math.floor(lastPosition*10)){
       self.loopPosition.set(Math.floor(schedule.from) % self.loopLength())
       lastPosition = schedule.from
     }
-  })
+  }
 
   var buttons = ControlButtons(self, duplexPort)
   var repeatButtons = RepeatButtons(self, duplexPort)
@@ -210,6 +215,12 @@ module.exports = function Launchpad(opts){
     repeater.setLength(value)
     holder.setLength(value)
   })
+
+  self._releases.push(
+    turnOffAllLights,
+    portHolder.destroy,
+    function(){ opts.scheduler.removeListener('data', onSchedule) }
+  )
 
   return self
 }

@@ -24,6 +24,12 @@ function PortHolder(context){
   var lastValue = null
   var port = null
 
+  obs.destroy = function(){
+    if (port){
+      port.close()
+    }
+  }
+
   watch(obs, function(descriptor){
     if (!deepEqual(descriptor,lastValue)){
 
@@ -32,17 +38,20 @@ function PortHolder(context){
       }
 
       if (Array.isArray(descriptor) && descriptor[0]){
-        var port = MidiStream(descriptor[0], descriptor[1] || 0)
+        port = MidiStream(descriptor[0], descriptor[1] || 0)
         port.on('connect', function(){
           obs.stream.set(port)
+          obs.stream.emit('switch')
           console.log('connect', descriptor, port)
         })
         port.on('error', function(){
           obs.stream.set(empty)
+          port = null
         })
       } else {
         obs.stream.set(empty)
         console.log('disconnect', port)
+        port = null
       }
       lastValue = descriptor
     }
