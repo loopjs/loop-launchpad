@@ -15,6 +15,7 @@ var RepeatButtons = require('./lib/repeat-buttons')
 var ControlButtons = require('./lib/control-buttons')
 
 var ObservStruct = require('observ-struct')
+var ObservAvailableMidiPorts = require('./lib/available-midi-ports.js')
 
 var computed = require('observ/computed')
 
@@ -59,10 +60,12 @@ module.exports = function Launchpad(opts){
   self.recording = ObservArray([]),
   self.loopPosition = Observ()
 
+  self.portChoices = ObservAvailableMidiPorts()
+
   // for binding to visual interface
   self.gridState = computed([
-    self.grid, self.selection, self.playing, self.active, self.recording, noRepeat
-  ], function(grid, selection, playing, active, recording, noRepeat){
+    self.grid, self.selection, self.playing, self.active, self.recording, noRepeat, self.portChoices, self.selectedChunkId
+  ], function(grid, selection, playing, active, recording, noRepeat, portChoices, selectedChunkId){
     var length = grid.data.length
     var result = []
     for (var i=0;i<length;i++){
@@ -79,7 +82,9 @@ module.exports = function Launchpad(opts){
     }
     return {
       grid: ArrayGrid(result, grid.shape, grid.stride),
-      chunks: self.chunkState()
+      chunks: self.chunkState(),
+      selectedChunkId: selectedChunkId,
+      portChoices: portChoices
     }
   })
 
