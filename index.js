@@ -64,7 +64,7 @@ module.exports = function Launchpad(opts){
 
   // for binding to visual interface
   self.gridState = computed([
-    self.grid, self.selection, self.playing, self.active, self.recording, noRepeat, self.portChoices, self.selectedChunkId
+    self.grid, self.selection, self.playing, self.active, self.recording, noRepeat, self.portChoices
   ], function(grid, selection, playing, active, recording, noRepeat, portChoices, selectedChunkId){
     var length = grid.data.length
     var result = []
@@ -83,7 +83,6 @@ module.exports = function Launchpad(opts){
     return {
       grid: ArrayGrid(result, grid.shape, grid.stride),
       chunks: self.chunkState(),
-      selectedChunkId: selectedChunkId,
       portChoices: portChoices
     }
   })
