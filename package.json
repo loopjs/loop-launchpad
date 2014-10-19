@@ -9,7 +9,7 @@
     "deep-equal": "^0.2.1",
     "loop-grid": "^2.0.0",
     "observ-array": "^3.0.0",
-    "observ-grid": "^2.2.0",
+    "observ-grid": "^2.5.0",
     "observ-grid-stack": "^2.0.0",
     "observ-midi": "^1.2.1",
     "switch-stream": "~0.0.0"
