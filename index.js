@@ -45,11 +45,8 @@ module.exports = function Launchpad(opts){
   var noRepeat = computeIndexesWhereGridContains(self.flags, 'noRepeat')
 
   self.repeatLength = Observ(2)
-  self.loopLength = Observ(8)
+  
   self.selection = ObservArray([])
-  self.recording = ObservArray([]),
-  self.loopPosition = Observ()
-
   self.portChoices = ObservAvailableMidiPorts()
 
   // for binding to visual interface
@@ -76,16 +73,6 @@ module.exports = function Launchpad(opts){
       portChoices: portChoices
     }
   })
-
-  var lastPosition = -1
-  opts.scheduler.on('data', onSchedule)
-
-  function onSchedule(schedule){
-    if (Math.floor(schedule.from*10) > Math.floor(lastPosition*10)){
-      self.loopPosition.set(Math.floor(schedule.from) % self.loopLength())
-      lastPosition = schedule.from
-    }
-  }
 
   var buttons = ControlButtons(self, duplexPort)
   var repeatButtons = RepeatButtons(self, duplexPort)
@@ -127,7 +114,7 @@ module.exports = function Launchpad(opts){
     if (value){
       buttons.loopRange.flash(stateLights.green)
       if (learnMode === 'store'){
-        self.loopRange(opts.scheduler.getCurrentPosition()-self.loopLength(), self.loopLength())
+        self.store()
       } else if (learnMode === 'flatten'){
         self.flatten()
         clearSelection()
