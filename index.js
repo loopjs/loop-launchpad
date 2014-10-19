@@ -18,6 +18,7 @@ var ObservStruct = require('observ-struct')
 var ObservAvailableMidiPorts = require('./lib/available-midi-ports.js')
 
 var computed = require('observ/computed')
+var computeIndexesWhereGridContains = require('./lib/indexes-where-grid-contains.js')
 
 var PortHolder = require('./port-holder')
 
@@ -41,18 +42,7 @@ module.exports = function Launchpad(opts){
     port: portHolder
   })
 
-  var noRepeat = computed([self.flags], function(flags){
-    var noRepeatIndexes = []
-    flags.data.forEach(function(val, i){
-      if (val){
-        if (~val.indexOf('noRepeat')){
-          noRepeatIndexes.push(i)
-        }
-      }
-    })
-    return noRepeatIndexes
-  })
-
+  var noRepeat = computeIndexesWhereGridContains(self.flags, 'noRepeat')
 
   self.repeatLength = Observ(2)
   self.loopLength = Observ(8)
