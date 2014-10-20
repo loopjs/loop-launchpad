@@ -62,7 +62,7 @@ module.exports = function Launchpad(opts){
           isPlaying: playing.data[i],
           isActive: active.data[i],
           isSelected: inArray(selection, i),
-          isRecording: inArray(recording, i),
+          isRecording: recording.data[i],
           noRepeat: inArray(noRepeat, i)
         }
       }
