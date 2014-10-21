@@ -5,7 +5,7 @@ var ArrayGrid = require('array-grid')
 
 var Repeater = require('./lib/repeater')
 var Holder = require('./lib/holder')
-var Selector = require('./lib/selector')
+var Selector = require('loop-grid-selector')
 var Mover = require('./lib/mover')
 var Suppressor = require('./lib/suppressor')
 
@@ -18,7 +18,7 @@ var ObservStruct = require('observ-struct')
 var computedPortNames = require('midi-port-holder/computed-port-names')
 
 var computed = require('observ/computed')
-var computeIndexesWhereGridContains = require('./lib/indexes-where-grid-contains.js')
+var computeIndexesWhereGridContains = require('observ-grid/indexes-where-contains')
 
 var PortHolder = require('midi-port-holder')
 
@@ -42,11 +42,11 @@ module.exports = function Launchpad(opts){
     port: portHolder
   })
 
+  var selector = self.selected = Selector(opts.shape)
   var noRepeat = computeIndexesWhereGridContains(self.flags, 'noRepeat')
 
   self.repeatLength = Observ(2)
   
-  self.selection = ObservArray([])
   self.portChoices = computedPortNames()
 
   var buttons = ControlButtons(self, duplexPort)
@@ -64,9 +64,17 @@ module.exports = function Launchpad(opts){
 
   var repeater = Repeater(inputGrabber, self, noRepeat)
   var holder = Holder(self)
-  var selector = Selector(inputGrabber, self.selection, layers.selection, stateLights.green)
   var mover = Mover(self, inputGrabber)
   var suppressor = Suppressor(self, layers.suppressing, stateLights.red)
+
+  var selectedIndexes = computed([selector], function(selectionGrid){
+    return selectionGrid.data.reduce(function(result, value, i){
+      if (value){
+        result.push(i)
+      }
+      return result
+    }, [])
+  })
 
   var learnMode = 'store'
   var recordingNotes = []
@@ -120,7 +128,7 @@ module.exports = function Launchpad(opts){
   buttons.hold(function(value){
     if (value){
       buttons.hold.output.set(stateLights.yellow)
-      holder.start(opts.scheduler.getCurrentPosition(), selector.selection())
+      holder.start(opts.scheduler.getCurrentPosition(), selectedIndexes())
     } else {
       buttons.hold.output.set(stateLights.off)
       holder.stop()
@@ -130,7 +138,7 @@ module.exports = function Launchpad(opts){
   buttons.suppress(function(value){
     if (value){
       buttons.suppress.output.set(stateLights.red)
-      suppressor.start(selector.selection())
+      suppressor.start(selectedIndexes())
     } else {
       buttons.suppress.output.set(stateLights.off)
       suppressor.stop()
@@ -149,10 +157,10 @@ module.exports = function Launchpad(opts){
       mover.stop()
       selector.clear()
       buttons.select.output.set(stateLights.green)
-      selector.start()
+      selector.start(inputGrabber)
     } else {
-      if (selector.selection.getLength()){
-        mover.start(selector.selection())
+      if (selectedIndexes().length){
+        mover.start(selectedIndexes())
       } else {
         selector.stop()
         buttons.select.output.set(stateLights.off)
