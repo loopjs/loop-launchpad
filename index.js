@@ -15,12 +15,12 @@ var RepeatButtons = require('./lib/repeat-buttons')
 var ControlButtons = require('./lib/control-buttons')
 
 var ObservStruct = require('observ-struct')
-var ObservAvailableMidiPorts = require('./lib/available-midi-ports.js')
+var computedPortNames = require('midi-port-holder/computed-port-names')
 
 var computed = require('observ/computed')
 var computeIndexesWhereGridContains = require('./lib/indexes-where-grid-contains.js')
 
-var PortHolder = require('./port-holder')
+var PortHolder = require('midi-port-holder')
 
 module.exports = function Launchpad(opts){
 
@@ -47,7 +47,6 @@ module.exports = function Launchpad(opts){
   self.repeatLength = Observ(2)
   
   self.selection = ObservArray([])
-  self.portChoices = ObservAvailableMidiPorts()
 
   // for binding to visual interface
   self.gridState = computed([
@@ -73,6 +72,7 @@ module.exports = function Launchpad(opts){
       portChoices: portChoices
     }
   })
+  self.portChoices = computedPortNames()
 
   var buttons = ControlButtons(self, duplexPort)
   var repeatButtons = RepeatButtons(self, duplexPort)
