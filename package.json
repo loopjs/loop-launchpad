@@ -1,6 +1,6 @@
 {
   "name": "loop-launchpad",
-  "version": "2.2.1",
+  "version": "2.2.2",
   "description": "Novation Launchpad bindings for loop-grid",
   "main": "index.js",
   "dependencies": {
@@ -13,7 +13,7 @@
     "ditty-grid-stream": "^1.0.0",
     "observ-midi": "^1.2.1",
     "midi-port-holder": "^1.0.0",
-    "loop-grid-selector":"^1.0.0"
+    "loop-grid-selector": "^1.0.0"
   },
   "devDependencies": {},
   "scripts": {
