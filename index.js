@@ -47,31 +47,6 @@ module.exports = function Launchpad(opts){
   self.repeatLength = Observ(2)
   
   self.selection = ObservArray([])
-
-  // for binding to visual interface
-  self.gridState = computed([
-    self.grid, self.selection, self.playing, self.active, self.recording, noRepeat, self.portChoices
-  ], function(grid, selection, playing, active, recording, noRepeat, portChoices, selectedChunkId){
-    var length = grid.data.length
-    var result = []
-    for (var i=0;i<length;i++){
-      if (grid.data[i]){
-        result[i] = {
-          id: grid.data[i],
-          isPlaying: playing.data[i],
-          isActive: active.data[i],
-          isSelected: inArray(selection, i),
-          isRecording: recording.data[i],
-          noRepeat: inArray(noRepeat, i)
-        }
-      }
-    }
-    return {
-      grid: ArrayGrid(result, grid.shape, grid.stride),
-      chunks: self.chunkState(),
-      portChoices: portChoices
-    }
-  })
   self.portChoices = computedPortNames()
 
   var buttons = ControlButtons(self, duplexPort)
