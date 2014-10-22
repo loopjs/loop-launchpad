@@ -1,195 +1,261 @@
 var LoopGrid = require('loop-grid')
-var Observ = require('observ')
-var ObservArray = require('observ-array')
-var ArrayGrid = require('array-grid')
-
-var Repeater = require('loop-grid-repeater')
-var Holder = require('loop-grid-holder')
 var Selector = require('loop-grid-selector')
+var Holder = require('loop-grid-holder')
 var Mover = require('loop-grid-mover')
+var Repeater = require('loop-grid-repeater')
 var Suppressor = require('loop-grid-suppressor')
 
-var stateLights = require('./state-lights')
-var ControllerGrid = require('./lib/controller-grid')
-var RepeatButtons = require('./lib/repeat-buttons')
-var ControlButtons = require('./lib/control-buttons')
+var ObservMidi = require('observ-midi')
+var ObservGridStack = require('observ-grid-stack')
+var ObservGridGrabber = require('observ-grid/grabber')
+var ObservMidiPort = require('midi-port-holder')
+var MidiButtons = require('./midi-buttons.js')
+var watchButtons = require('./lib/watch-buttons.js')
 
-var ObservStruct = require('observ-struct')
+var Observ = require('observ')
+var ArrayGrid = require('array-grid')
+
+var DittyGridStream = require('ditty-grid-stream')
+
 var computedPortNames = require('midi-port-holder/computed-port-names')
 
-var computed = require('observ/computed')
-var computeIndexesWhereGridContains = require('observ-grid/indexes-where-contains')
+var watch = require('observ/watch')
+var mapWatchDiff = require('./lib/map-watch-diff-stack.js')
+var mapGridValue = require('observ-grid/map-values')
+var computeIndexesWhereContains = require('observ-grid/indexes-where-contains')
 
-var PortHolder = require('midi-port-holder')
+var stateLights = require('./state-lights.js')
+var repeatStates = [2, 1, 2/3, 1/2, 1/3, 1/4, 1/6, 1/8]
 
-module.exports = function Launchpad(opts){
 
+module.exports = function(opts){
+
+  // resolve options
   var opts = Object.create(opts)
-  opts.shape = [8, 8]
-
-  var portHolder = PortHolder(opts)
-  var duplexPort = portHolder.stream
   var triggerOutput = opts.triggerOutput
+  var scheduler = opts.scheduler
+  var gridMapping = getLaunchpadGridMapping()
+  opts.shape = gridMapping.shape
 
+  // controller midi port
+  var portHolder = ObservMidiPort()
+  var duplexPort = portHolder.stream
   duplexPort.on('switch', turnOffAllLights)
+
+  // extend loop-grid instance
+  var self = LoopGrid(opts, {
+    port: portHolder
+  })
+
+  self.portChoices = computedPortNames()
+  self.repeatLength = Observ(2)
+
+  // loop transforms
+  var transforms = {
+    selector: Selector(gridMapping.shape, gridMapping.stride),
+    holder: Holder(self.transform),
+    mover: Mover(self.transform),
+    repeater: Repeater(self.transform),
+    suppressor: Suppressor(self.transform, gridMapping.shape, gridMapping.stride)
+  }
+
+  var outputLayers = ObservGridStack([
+
+    // recording
+    mapGridValue(self.recording, stateLights.redLow),
+
+    // active
+    mapGridValue(self.active, stateLights.greenLow),
+
+    // selected
+    mapGridValue(transforms.selector, stateLights.green),
+
+    // suppressing
+    mapGridValue(transforms.suppressor, stateLights.red),
+
+    // playing
+    mapGridValue(self.playing, stateLights.amber)
+
+  ])
+
+  var controllerGrid = ObservMidi(duplexPort, gridMapping, outputLayers)
+  var inputGrabber = ObservGridGrabber(controllerGrid)
+
+  var noRepeat = computeIndexesWhereContains(self.flags, 'noRepeat')
+  var grabInputExcludeNoRepeat = inputGrabber.bind(this, {exclude: noRepeat})
+
+  // trigger notes at bottom of input stack
+  DittyGridStream(inputGrabber, self.grid, scheduler).pipe(triggerOutput)
+
+  // midi button mapping
+  var buttons = MidiButtons(duplexPort, {
+    store: '176/104',
+    suppress: '176/105',
+    undo: '176/106',
+    redo: '176/107',
+    hold: '176/108',
+    snap1: '176/109',
+    snap2: '176/110',
+    select: '176/111'
+  })
+
+  watchButtons(buttons, {
+
+    store: function(value){
+      if (value){
+        this.flash(stateLights.green)
+        if (!self.transforms.getLength()){
+          self.store()
+        } else {
+          self.flatten()
+          clearSelection()
+        }
+      }
+    },
+ 
+    suppress: function(value){
+      if (value){
+        var turnOffLight = this.light(stateLights.red)
+        transforms.suppressor.start(transforms.selector.selectedIndexes(), turnOffLight)
+      } else {
+        transforms.suppressor.stop()
+      }
+    },
+ 
+    undo: function(value){
+      if (value){
+        self.undo()
+        this.flash(stateLights.red, 100)
+        buttons.store.flash(stateLights.red)
+      }
+    },
+ 
+    redo: function(value){
+      if (value){
+        self.redo()
+        this.flash(stateLights.red, 100)
+        buttons.store.flash(stateLights.red)
+      }
+    },
+ 
+    hold: function(value){
+      if (value){
+        var turnOffLight = this.light(stateLights.yellow)
+        transforms.holder.start(
+          scheduler.getCurrentPosition(), 
+          transforms.selector.selectedIndexes(), 
+          turnOffLight
+        )
+      } else {
+        transforms.holder.stop()
+      }
+    },
+ 
+    select: function(value){
+      if (value){
+        var turnOffLight = this.light(stateLights.green)
+        transforms.selector.start(inputGrabber, function done(){
+          transforms.mover.stop()
+          transforms.selector.clear()
+          turnOffLight()
+        })
+      } else {
+        if (transforms.selector.selectedIndexes().length){
+          transforms.mover.start(inputGrabber, transforms.selector.selectedIndexes())
+        } else {
+          transforms.selector.stop()
+        }
+      }
+    }
+  })
+
+  // light up undo buttons by default
+  buttons.undo.light(stateLights.redLow)
+  buttons.redo.light(stateLights.redLow)
+
+  // light up store button when transforming (flatten mode)
+  var releaseFlattenLight = null
+  watch(self.transforms, function(values){
+    if (values.length && !releaseFlattenLight){
+      releaseFlattenLight = buttons.store.light(stateLights.greenLow)
+    } else if (releaseFlattenLight){
+      releaseFlattenLight()
+      releaseFlattenLight = null
+    }
+  })
+
+
+  var repeatButtons = MidiButtons(duplexPort, {
+    0: '144/8',
+    1: '144/24',
+    2: '144/40',
+    3: '144/56',
+    4: '144/72',
+    5: '144/88',
+    6: '144/104',
+    7: '144/120'
+  })
+
+  // repeater
+  var releaseRepeatLight = null
+  mapWatchDiff(repeatStates, repeatButtons, self.repeatLength.set)
+  watch(self.repeatLength, function(value){
+    var button = repeatButtons[repeatStates.indexOf(value)]
+    if (button){
+      if (releaseRepeatLight) releaseRepeatLight()
+      releaseRepeatLight = button.light(stateLights.amberLow)
+    }
+    transforms.holder.setLength(value)
+    if (value < 2){
+      transforms.repeater.start(grabInputExcludeNoRepeat, value)
+    } else {
+      transforms.repeater.stop()
+    }
+  })
+
+
+  // visual metronome / loop position
+  var releaseBeatLight = null
+  var currentBeat = null
+  watch(self.loopPosition, function(value){
+    var index = Math.floor(value / self.loopLength() * 8)
+    if (index != currentBeat){
+      var button = repeatButtons[index]
+      if (button){
+        releaseBeatLight&&releaseBeatLight()
+        releaseBeatLight = button.light(stateLights.greenLow, 0)
+        button.flash(stateLights.green)
+      }
+      currentBeat = index
+    }
+  })
+
+  return self
+
+
+
+
+  // scoped
 
   function turnOffAllLights(){
     duplexPort.write([176, 0, 0])
   }
 
-
-  var self = LoopGrid(opts, {
-    port: portHolder
-  })
-
-  var noRepeat = computeIndexesWhereGridContains(self.flags, 'noRepeat')
-
-  var selector = self.selected = Selector(opts.shape)
-  var repeater = Repeater(self.transform)
-  var mover = Mover(self.transform)
-  var suppressor = self.suppressing = Suppressor(self.transform, opts.shape)
-  var holder = Holder(self.transform)
-
-  self.repeatLength = Observ(2)
-  
-  self.portChoices = computedPortNames()
-
-  var buttons = ControlButtons(self, duplexPort)
-  var repeatButtons = RepeatButtons(self, duplexPort)
-
-  var controllerGrid = self.controllerGrid = ControllerGrid(self, {
-    duplexPort: duplexPort, 
-    triggerOutput: triggerOutput,
-    scheduler: opts.scheduler,
-    player: opts.player
-  })
-
-  var inputGrabber = controllerGrid.inputGrabber
-
-  var grabInputExcludeNoRepeat = inputGrabber.bind(this, {exclude: noRepeat})
-
-
-
-  var learnMode = 'store'
-  var recordingNotes = []
-
-  function refreshLearnButton(){
-    if (self.transforms.getLength()){
-      buttons.loopRange.state.set(stateLights.greenLow)
-      learnMode = 'flatten'
-    } else {
-      if (recordingNotes.length > 0){
-        buttons.loopRange.state.set(stateLights.redLow)
-      } else {
-        buttons.loopRange.state.set(stateLights.off)
-      }
-      learnMode = 'store'
-    }
-  }
-
-  buttons.loopRange(function(value){
-    if (value){
-      buttons.loopRange.flash(stateLights.green)
-      if (learnMode === 'store'){
-        self.store()
-      } else if (learnMode === 'flatten'){
-        self.flatten()
-        clearSelection()
-      }
-    }
-  })
-
-  self.transforms(function(transforms){
-    refreshLearnButton()
-  })
-
-  buttons.undo.output.set(stateLights.redLow)
-  buttons.undo(function(value){
-    if (value){
-      buttons.undo.flash(stateLights.red, 100)
-      self.undo()
-    }
-  })
-
-  buttons.redo.output.set(stateLights.redLow)
-  buttons.redo(function(value){
-    if (value){
-      buttons.redo.flash(stateLights.red, 100)
-      self.redo()
-    }
-  })
-
-  buttons.hold(function(value){
-    if (value){
-      buttons.hold.output.set(stateLights.yellow)
-      holder.start(opts.scheduler.getCurrentPosition(), selector.selectedIndexes())
-    } else {
-      buttons.hold.output.set(stateLights.off)
-      holder.stop()
-    }
-  })
-
-  buttons.suppress(function(value){
-    if (value){
-      buttons.suppress.output.set(stateLights.red)
-      suppressor.start(selector.selectedIndexes())
-    } else {
-      buttons.suppress.output.set(stateLights.off)
-      suppressor.stop()
-    }
-  })
-
   function clearSelection(){
-    mover.stop()
-    selector.clear()
-    selector.stop()
-    buttons.select.output.set(stateLights.off)
+    transforms.selector.stop()
   }
-
-  buttons.select(function(value){
-    if (value){
-      mover.stop()
-      selector.clear()
-      buttons.select.output.set(stateLights.green)
-      selector.start(inputGrabber)
-    } else {
-      if (selector.selectedIndexes().length){
-        mover.start(inputGrabber, selector.selectedIndexes())
-      } else {
-        selector.stop()
-        buttons.select.output.set(stateLights.off)
-      }
-    }
-  })
-
-  self.repeatLength(function(value){
-
-    if (value < 2){
-      repeater.start(grabInputExcludeNoRepeat, value)
-    } else {
-      repeater.stop()
-    }
-
-    holder.setLength(value)
-  })
-
-  self._releases.push(
-    turnOffAllLights,
-    portHolder.destroy,
-    function(){ opts.scheduler.removeListener('data', onSchedule) }
-  )
-
-  return self
-}
-
-function updateArray(obs, value){
-  obs.transaction(function(rawList){
-    rawList.length = 0
-    Array.prototype.push.apply(rawList, value)
-  })
 }
 
 
-function inArray(array, value){
-  return Array.isArray(array) && !!~array.indexOf(value)
+
+function getLaunchpadGridMapping(){
+  var result = []
+  var message = 144
+  for (var r=0;r<8;r++){
+    for (var c=0;c<8;c++){
+      var noteId = (r*16) + (c % 8)
+      result.push(message + '/' + noteId)
+    }
+  }
+  return ArrayGrid(result, [8, 8])
 }
