@@ -4,7 +4,7 @@ var ObservArray = require('observ-array')
 var ArrayGrid = require('array-grid')
 
 var Repeater = require('loop-grid-repeater')
-var Holder = require('./lib/holder')
+var Holder = require('loop-grid-holder')
 var Selector = require('loop-grid-selector')
 var Mover = require('loop-grid-mover')
 var Suppressor = require('loop-grid-suppressor')
@@ -48,7 +48,7 @@ module.exports = function Launchpad(opts){
   var repeater = Repeater(self.transform)
   var mover = Mover(self.transform)
   var suppressor = self.suppressing = Suppressor(self.transform, opts.shape)
-  var holder = Holder(self)
+  var holder = Holder(self.transform)
 
   self.repeatLength = Observ(2)
   
