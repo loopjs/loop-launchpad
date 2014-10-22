@@ -70,14 +70,6 @@ module.exports = function Launchpad(opts){
   var suppressor = Suppressor(self, layers.suppressing, stateLights.red)
 
 
-  var selectedIndexes = computed([selector], function(selectionGrid){
-    return selectionGrid.data.reduce(function(result, value, i){
-      if (value){
-        result.push(i)
-      }
-      return result
-    }, [])
-  })
 
   var learnMode = 'store'
   var recordingNotes = []
@@ -131,7 +123,7 @@ module.exports = function Launchpad(opts){
   buttons.hold(function(value){
     if (value){
       buttons.hold.output.set(stateLights.yellow)
-      holder.start(opts.scheduler.getCurrentPosition(), selectedIndexes())
+      holder.start(opts.scheduler.getCurrentPosition(), selector.selectedIndexes())
     } else {
       buttons.hold.output.set(stateLights.off)
       holder.stop()
@@ -141,7 +133,7 @@ module.exports = function Launchpad(opts){
   buttons.suppress(function(value){
     if (value){
       buttons.suppress.output.set(stateLights.red)
-      suppressor.start(selectedIndexes())
+      suppressor.start(selector.selectedIndexes())
     } else {
       buttons.suppress.output.set(stateLights.off)
       suppressor.stop()
@@ -162,8 +154,8 @@ module.exports = function Launchpad(opts){
       buttons.select.output.set(stateLights.green)
       selector.start(inputGrabber)
     } else {
-      if (selectedIndexes().length){
-        mover.start(inputGrabber, selectedIndexes())
+      if (selector.selectedIndexes().length){
+        mover.start(inputGrabber, selector.selectedIndexes())
       } else {
         selector.stop()
         buttons.select.output.set(stateLights.off)
