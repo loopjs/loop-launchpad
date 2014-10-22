@@ -9,7 +9,7 @@ var ObservMidi = require('observ-midi')
 var ObservGridStack = require('observ-grid-stack')
 var ObservGridGrabber = require('observ-grid/grabber')
 var ObservMidiPort = require('midi-port-holder')
-var MidiButtons = require('./midi-buttons.js')
+var MidiButtons = require('observ-midi/light-stack')
 var watchButtons = require('./lib/watch-buttons.js')
 
 var Observ = require('observ')
