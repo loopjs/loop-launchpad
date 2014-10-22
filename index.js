@@ -3,7 +3,7 @@ var Observ = require('observ')
 var ObservArray = require('observ-array')
 var ArrayGrid = require('array-grid')
 
-var Repeater = require('./lib/repeater')
+var Repeater = require('loop-grid-repeater')
 var Holder = require('./lib/holder')
 var Selector = require('loop-grid-selector')
 var Mover = require('./lib/mover')
@@ -62,10 +62,13 @@ module.exports = function Launchpad(opts){
   var inputGrabber = controllerGrid.inputGrabber
   var layers = controllerGrid.layers
 
-  var repeater = Repeater(inputGrabber, self, noRepeat)
+  var repeater = Repeater(self.transform)
+  var grabInputExcludeNoRepeat = inputGrabber.bind(this, {exclude: noRepeat})
+
   var holder = Holder(self)
   var mover = Mover(self, inputGrabber)
   var suppressor = Suppressor(self, layers.suppressing, stateLights.red)
+
 
   var selectedIndexes = computed([selector], function(selectionGrid){
     return selectionGrid.data.reduce(function(result, value, i){
@@ -171,12 +174,11 @@ module.exports = function Launchpad(opts){
   self.repeatLength(function(value){
 
     if (value < 2){
-      repeater.start()
+      repeater.start(grabInputExcludeNoRepeat, value)
     } else {
       repeater.stop()
     }
 
-    repeater.setLength(value)
     holder.setLength(value)
   })
 
