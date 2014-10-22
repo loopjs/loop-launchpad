@@ -65,7 +65,6 @@ module.exports = function Launchpad(opts){
   })
 
   var inputGrabber = controllerGrid.inputGrabber
-  var layers = controllerGrid.layers
 
   var grabInputExcludeNoRepeat = inputGrabber.bind(this, {exclude: noRepeat})
 
