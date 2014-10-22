@@ -6,7 +6,7 @@ var ArrayGrid = require('array-grid')
 var Repeater = require('loop-grid-repeater')
 var Holder = require('./lib/holder')
 var Selector = require('loop-grid-selector')
-var Mover = require('./lib/mover')
+var Mover = require('loop-grid-mover')
 var Suppressor = require('./lib/suppressor')
 
 var stateLights = require('./state-lights')
@@ -66,7 +66,7 @@ module.exports = function Launchpad(opts){
   var grabInputExcludeNoRepeat = inputGrabber.bind(this, {exclude: noRepeat})
 
   var holder = Holder(self)
-  var mover = Mover(self, inputGrabber)
+  var mover = Mover(self.transform)
   var suppressor = Suppressor(self, layers.suppressing, stateLights.red)
 
 
@@ -163,7 +163,7 @@ module.exports = function Launchpad(opts){
       selector.start(inputGrabber)
     } else {
       if (selectedIndexes().length){
-        mover.start(selectedIndexes())
+        mover.start(inputGrabber, selectedIndexes())
       } else {
         selector.stop()
         buttons.select.output.set(stateLights.off)

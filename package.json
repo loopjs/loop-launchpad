@@ -8,6 +8,7 @@
     "deep-equal": "^0.2.1",
     "ditty-grid-stream": "^1.0.0",
     "loop-grid": "^3.1.0",
+    "loop-grid-mover": "^1.0.0",
     "loop-grid-repeater": "^1.0.0",
     "loop-grid-selector": "^1.0.0",
     "midi-port-holder": "^1.0.0",
