@@ -7,7 +7,7 @@ var Repeater = require('loop-grid-repeater')
 var Holder = require('./lib/holder')
 var Selector = require('loop-grid-selector')
 var Mover = require('loop-grid-mover')
-var Suppressor = require('./lib/suppressor')
+var Suppressor = require('loop-grid-suppressor')
 
 var stateLights = require('./state-lights')
 var ControllerGrid = require('./lib/controller-grid')
@@ -42,8 +42,13 @@ module.exports = function Launchpad(opts){
     port: portHolder
   })
 
-  var selector = self.selected = Selector(opts.shape)
   var noRepeat = computeIndexesWhereGridContains(self.flags, 'noRepeat')
+
+  var selector = self.selected = Selector(opts.shape)
+  var repeater = Repeater(self.transform)
+  var mover = Mover(self.transform)
+  var suppressor = self.suppressing = Suppressor(self.transform, opts.shape)
+  var holder = Holder(self)
 
   self.repeatLength = Observ(2)
   
@@ -62,12 +67,7 @@ module.exports = function Launchpad(opts){
   var inputGrabber = controllerGrid.inputGrabber
   var layers = controllerGrid.layers
 
-  var repeater = Repeater(self.transform)
   var grabInputExcludeNoRepeat = inputGrabber.bind(this, {exclude: noRepeat})
-
-  var holder = Holder(self)
-  var mover = Mover(self.transform)
-  var suppressor = Suppressor(self, layers.suppressing, stateLights.red)
 
 
 
