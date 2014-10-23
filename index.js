@@ -108,7 +108,7 @@ module.exports = function(opts){
           self.store()
         } else {
           self.flatten()
-          clearSelection()
+          transforms.selector.stop()
         }
       }
     },
@@ -241,9 +241,6 @@ module.exports = function(opts){
     duplexPort.write([176, 0, 0])
   }
 
-  function clearSelection(){
-    transforms.selector.stop()
-  }
 }
 
 
