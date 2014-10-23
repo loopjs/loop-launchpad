@@ -6,7 +6,7 @@
   "dependencies": {
     "array-grid": "^1.3.0",
     "deep-equal": "^0.2.1",
-    "ditty-grid-stream": "^1.0.0",
+    "ditty-grid-stream": "^1.1.0",
     "loop-grid": "^3.1.0",
     "loop-grid-holder": "^1.0.0",
     "loop-grid-mover": "^1.0.0",

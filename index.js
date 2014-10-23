@@ -85,7 +85,8 @@ module.exports = function(opts){
   var grabInputExcludeNoRepeat = inputGrabber.bind(this, {exclude: noRepeat})
 
   // trigger notes at bottom of input stack
-  DittyGridStream(inputGrabber, self.grid, scheduler).pipe(triggerOutput)
+  var output = DittyGridStream(inputGrabber, self.grid, scheduler)
+  output.pipe(triggerOutput)
 
   // midi button mapping
   var buttons = MidiButtons(duplexPort, {
@@ -229,6 +230,13 @@ module.exports = function(opts){
       currentBeat = index
     }
   })
+
+  // cleanup / disconnect from midi on destroy
+  self._releases.push(
+    turnOffAllLights,
+    portHolder.destroy,
+    output.destroy
+  )
 
   return self
 
