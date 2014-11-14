@@ -30,14 +30,14 @@ By default the last 2 bars of everything you play is being recorded. The top but
 
 Top button **2**/**view** will suppress all current playback when held down. You can lock that in by pressing the Store button (1/learn) at the same time.
 
-## Undo / Redo
+### Undo / Redo
 
 Top buttons **3** and **4** (the page buttons) trigger undo or redo of stored loop on press.
 
-## Beat Hold
+### Beat Hold
 
 Top button **5**/**inst** will loop the currently playing beat at the rate specified by the Beat Repeat buttons (A-H) when held down. You can lock in the loop by pressing the Store button (1/learn) at the same time.
 
-## Select / Move
+### Select / Move
 
 To select buttons, hold down top button **8**/**mixer**, and press some buttons on the grid and release. You can now hold **Suppress** to mute the selected slots, or hold another button on the grid to move/offset the loop events. 
