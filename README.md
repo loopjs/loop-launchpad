@@ -1,7 +1,7 @@
 loop-launchpad
 ===
 
-Novation Launchpad bindings for [loop-grid](https://github.com/mmckegg/loop-grid) for using with [Loop Drop](https://loopjs.com).
+Novation Launchpad bindings for [loop-grid](https://github.com/mmckegg/loop-grid) for using with [Loop Drop](http://loopjs.com).
 
 ## Controller Mapping
 
