@@ -37,6 +37,8 @@ module.exports = function(opts){
   var gridMapping = getLaunchpadGridMapping()
   opts.shape = gridMapping.shape
 
+  var shiftHeld = false
+
   // controller midi port
   var portHolder = ObservMidiPort()
   var duplexPort = portHolder.stream
@@ -100,6 +102,8 @@ module.exports = function(opts){
     select: '176/111'
   })
 
+  var releaseLoopLengthLights = []
+
   watchButtons(buttons, {
 
     store: function(value){
@@ -125,17 +129,29 @@ module.exports = function(opts){
  
     undo: function(value){
       if (value){
-        self.undo()
-        this.flash(stateLights.red, 100)
-        buttons.store.flash(stateLights.red)
+        if (shiftHeld){ // halve loopLength
+          var current = self.loopLength() || 1
+          self.loopLength.set(current/2)
+          this.flash(stateLights.green, 100)
+        } else {
+          self.undo()
+          this.flash(stateLights.red, 100)
+          buttons.store.flash(stateLights.red)
+        }
       }
     },
  
     redo: function(value){
       if (value){
-        self.redo()
-        this.flash(stateLights.red, 100)
-        buttons.store.flash(stateLights.red)
+        if (shiftHeld){ // double loopLength
+          var current = self.loopLength() || 1
+          self.loopLength.set(current*2)
+          this.flash(stateLights.green, 100)
+        } else {
+          self.redo()
+          this.flash(stateLights.red, 100)
+          buttons.store.flash(stateLights.red)
+        }
       }
     },
  
@@ -166,6 +182,27 @@ module.exports = function(opts){
         } else {
           transforms.selector.stop()
         }
+      }
+    }
+  })
+
+  // shift button (share select button)
+  watch(buttons.select, function(value){
+    if (value){
+      shiftHeld = true
+
+      // turn on loop length lights
+      releaseLoopLengthLights.push(
+        buttons.undo.light(stateLights.greenLow),
+        buttons.redo.light(stateLights.greenLow)
+      )
+
+    } else {
+      shiftHeld = false
+
+      // turn off loop length lights
+      while (releaseLoopLengthLights.length){
+        releaseLoopLengthLights.pop()()
       }
     }
   })
@@ -218,6 +255,7 @@ module.exports = function(opts){
   // visual metronome / loop position
   var releaseBeatLight = null
   var currentBeat = null
+
   watch(self.loopPosition, function(value){
     var index = Math.floor(value / self.loopLength() * 8)
     if (index != currentBeat){
@@ -251,7 +289,10 @@ module.exports = function(opts){
 
 }
 
-
+function round(value, dp){
+  var pow = Math.pow(10, dp || 0)
+  return Math.round(value * pow) / pow
+}
 
 function getLaunchpadGridMapping(){
   var result = []

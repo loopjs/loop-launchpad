@@ -41,3 +41,7 @@ Top button **5**/**inst** will loop the currently playing beat at the rate speci
 ### Select / Move
 
 To select buttons, hold down top button **8**/**mixer**, and press some buttons on the grid and release. You can now hold **Suppress** to mute the selected slots, or hold another button on the grid to move/offset the loop events. 
+
+### Loop Length
+
+Hold `select` and press the `undo` button to halve loop length or `redo` to double.
