@@ -49,6 +49,11 @@ module.exports = function(opts){
     port: portHolder
   })
 
+  // grab the midi for the current port
+  self.grabInput = function(){
+    portHolder.grab()
+  }
+
   self.portChoices = computedPortNames()
   self.repeatLength = Observ(2)
 
