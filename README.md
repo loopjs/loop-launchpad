@@ -24,11 +24,11 @@ When beat repeat is enabled, **hold down** a trigger on the main grid, and it wi
 
 ### Store Loop
 
-By default the last 2 bars of everything you play is being recorded. The top buttons (1-8) control the current loop. Press **1**/**learn** (while not holding down any other buttons) to start looping the events you just played.
+By default the last 2 bars of everything you play is being recorded. The top buttons (1-8) control the current loop. Press **1**/**learn** to start looping the events you just played.
 
-### Suppress
+### Clear / Flatten
 
-Top button **2**/**view** will suppress all current playback when held down. You can lock that in by pressing the Store button (1/learn) at the same time.
+When no transformations are currently active (no beat repeat held or active suppression), **2**/**view** clears the currently playing loop, otherwise it locks in the current transform.
 
 ### Undo / Redo
 
@@ -36,7 +36,11 @@ Top buttons **3** and **4** (the page buttons) trigger undo or redo of stored lo
 
 ### Beat Hold
 
-Top button **5**/**inst** will loop the currently playing beat at the rate specified by the Beat Repeat buttons (A-H) when held down. You can lock in the loop by pressing the Store button (1/learn) at the same time.
+Top button **5**/**inst** will loop the currently playing beat at the rate specified by the Beat Repeat buttons (A-H) when held down. You can lock in the loop by pressing the Flatten button (2/view) at the same time.
+
+### Suppress
+
+Top button **6**/**fx** will suppress all current playback when held down. You can lock that in by pressing the Flatten button (2/view) at the same time.
 
 ### Select / Move
 
@@ -44,4 +48,4 @@ To select buttons, hold down top button **8**/**mixer**, and press some buttons 
 
 ### Loop Length
 
-Hold `select` and press the `undo` button to halve loop length or `redo` to double.
+Hold `select` (8/mixer) and press the `undo` (3/prevpage) button to halve loop length or `redo` (4/nextpage) to double.

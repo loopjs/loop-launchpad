@@ -98,11 +98,11 @@ module.exports = function(opts){
   // midi button mapping
   var buttons = MidiButtons(duplexPort, {
     store: '176/104',
-    suppress: '176/105',
+    flatten: '176/105',
     undo: '176/106',
     redo: '176/107',
     hold: '176/108',
-    snap1: '176/109',
+    suppress: '176/109',
     snap2: '176/110',
     select: '176/111'
   })
@@ -114,21 +114,23 @@ module.exports = function(opts){
     store: function(value){
       if (value){
         this.flash(stateLights.green)
-        if (!self.transforms.getLength()){
-          self.store()
-        } else {
-          self.flatten()
-          transforms.selector.stop()
-        }
+        self.store()
       }
     },
  
-    suppress: function(value){
+    flatten: function(value){
       if (value){
-        var turnOffLight = this.light(stateLights.red)
-        transforms.suppressor.start(transforms.selector.selectedIndexes(), turnOffLight)
-      } else {
-        transforms.suppressor.stop()
+        if (self.transforms.getLength()){
+          self.flatten()
+          transforms.selector.stop()
+          this.flash(stateLights.green, 100)
+        } else {
+          this.flash(stateLights.red, 100)
+          transforms.suppressor.start(transforms.selector.selectedIndexes())
+          self.flatten()
+          transforms.suppressor.stop()
+          transforms.selector.stop()
+        }
       }
     },
  
@@ -170,6 +172,15 @@ module.exports = function(opts){
         )
       } else {
         transforms.holder.stop()
+      }
+    },
+
+    suppress: function(value){
+      if (value){
+        var turnOffLight = this.light(stateLights.red)
+        transforms.suppressor.start(transforms.selector.selectedIndexes(), turnOffLight)
+      } else {
+        transforms.suppressor.stop()
       }
     },
  
@@ -216,11 +227,14 @@ module.exports = function(opts){
   buttons.undo.light(stateLights.redLow)
   buttons.redo.light(stateLights.redLow)
 
+  buttons.store.light(stateLights.amberLow)
+
+
   // light up store button when transforming (flatten mode)
   var releaseFlattenLight = null
   watch(self.transforms, function(values){
     if (values.length && !releaseFlattenLight){
-      releaseFlattenLight = buttons.store.light(stateLights.greenLow)
+      releaseFlattenLight = buttons.flatten.light(stateLights.greenLow)
     } else if (releaseFlattenLight){
       releaseFlattenLight()
       releaseFlattenLight = null
