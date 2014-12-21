@@ -1,6 +1,6 @@
 {
   "name": "loop-launchpad",
-  "version": "2.6.0",
+  "version": "2.7.0",
   "description": "Novation Launchpad bindings for loop-grid",
   "main": "index.js",
   "dependencies": {
