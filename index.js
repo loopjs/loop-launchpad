@@ -42,7 +42,9 @@ module.exports = function(opts){
   // controller midi port
   var portHolder = ObservMidiPort()
   var duplexPort = portHolder.stream
+  
   duplexPort.on('switch', turnOffAllLights)
+  duplexPort.on('switching', turnOffAllLights)
 
   // extend loop-grid instance
   var self = LoopGrid(opts, {
