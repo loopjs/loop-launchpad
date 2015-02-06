@@ -1,10 +1,16 @@
 var LoopGrid = require('loop-grid')
+var Looper = require('loop-grid/looper')
+var computeTargets = require('loop-grid/compute-targets')
+var computeFlags = require('loop-grid/compute-flags')
+
 var Selector = require('loop-grid-selector')
 var Holder = require('loop-grid-holder')
 var Mover = require('loop-grid-mover')
 var Repeater = require('loop-grid-repeater')
 var Suppressor = require('loop-grid-suppressor')
 
+var ObservVarhash = require('observ-varhash')
+var ObservStruct = require('observ-struct')
 var ObservMidi = require('observ-midi')
 var ObservGridStack = require('observ-grid-stack')
 var ObservGridGrabber = require('observ-grid/grabber')
@@ -28,14 +34,14 @@ var stateLights = require('./state-lights.js')
 var repeatStates = [2, 1, 2/3, 1/2, 1/3, 1/4, 1/6, 1/8]
 
 
-module.exports = function(opts){
+module.exports = function(context){
 
-  // resolve options
-  var opts = Object.create(opts)
-  var triggerOutput = opts.triggerOutput
-  var scheduler = opts.scheduler
+  var loopGrid = LoopGrid(context)
+  var looper = Looper(loopGrid)
+
+  var scheduler = context.scheduler
   var gridMapping = getLaunchpadGridMapping()
-  opts.shape = gridMapping.shape
+  loopGrid.shape.set(gridMapping.shape)
 
   var shiftHeld = false
 
@@ -47,34 +53,55 @@ module.exports = function(opts){
   duplexPort.on('switching', turnOffAllLights)
 
   // extend loop-grid instance
-  var self = LoopGrid(opts, {
-    port: portHolder
+  var obs = ObservStruct({
+    port: portHolder,
+    loopLength: loopGrid.loopLength,
+    chunkPositions: ObservVarhash({})
   })
 
+  obs.gridState = ObservStruct({
+    active: loopGrid.active,
+    playing: loopGrid.playing,
+    recording: looper.recording,
+    triggers: loopGrid.grid
+  })
+
+  watch(looper, loopGrid.loops.set)
+
+  obs.context = context
+  obs.playback = loopGrid
+  obs.looper = looper
+  obs.portChoices = computedPortNames()
+  obs.repeatLength = Observ(2)
+  
+  var flags = computeFlags(context.chunkLookup, obs.chunkPositions, loopGrid.shape)
+
+  watch( // compute targets from chunks
+    computeTargets(context.chunkLookup, obs.chunkPositions, loopGrid.shape), 
+    loopGrid.targets.set
+  )
+
   // grab the midi for the current port
-  self.grabInput = function(){
+  obs.grabInput = function(){
     portHolder.grab()
   }
-
-  self.portChoices = computedPortNames()
-  self.repeatLength = Observ(2)
 
   // loop transforms
   var transforms = {
     selector: Selector(gridMapping.shape, gridMapping.stride),
-    holder: Holder(self.transform),
-    mover: Mover(self.transform),
-    repeater: Repeater(self.transform),
-    suppressor: Suppressor(self.transform, gridMapping.shape, gridMapping.stride)
+    holder: Holder(looper.transform),
+    mover: Mover(looper.transform),
+    repeater: Repeater(looper.transform),
+    suppressor: Suppressor(looper.transform, gridMapping.shape, gridMapping.stride)
   }
 
   var outputLayers = ObservGridStack([
 
     // recording
-    mapGridValue(self.recording, stateLights.redLow),
+    mapGridValue(looper.recording, stateLights.redLow),
 
     // active
-    mapGridValue(self.active, stateLights.greenLow),
+    mapGridValue(loopGrid.active, stateLights.greenLow),
 
     // selected
     mapGridValue(transforms.selector, stateLights.green),
@@ -83,19 +110,19 @@ module.exports = function(opts){
     mapGridValue(transforms.suppressor, stateLights.red),
 
     // playing
-    mapGridValue(self.playing, stateLights.amber)
+    mapGridValue(loopGrid.playing, stateLights.amber)
 
   ])
 
   var controllerGrid = ObservMidi(duplexPort, gridMapping, outputLayers)
   var inputGrabber = ObservGridGrabber(controllerGrid)
 
-  var noRepeat = computeIndexesWhereContains(self.flags, 'noRepeat')
+  var noRepeat = computeIndexesWhereContains(flags, 'noRepeat')
   var grabInputExcludeNoRepeat = inputGrabber.bind(this, {exclude: noRepeat})
 
   // trigger notes at bottom of input stack
-  var output = DittyGridStream(inputGrabber, self.grid, scheduler)
-  output.pipe(triggerOutput)
+  var output = DittyGridStream(inputGrabber, loopGrid.grid, context.scheduler)
+  output.on('data', loopGrid.triggerEvent)
 
   // midi button mapping
   var buttons = MidiButtons(duplexPort, {
@@ -116,20 +143,20 @@ module.exports = function(opts){
     store: function(value){
       if (value){
         this.flash(stateLights.green)
-        self.store()
+        looper.store()
       }
     },
  
     flatten: function(value){
       if (value){
-        if (self.transforms.getLength()){
-          self.flatten()
+        if (looper.isTransforming()){
+          looper.flatten()
           transforms.selector.stop()
           this.flash(stateLights.green, 100)
         } else {
           this.flash(stateLights.red, 100)
           transforms.suppressor.start(transforms.selector.selectedIndexes())
-          self.flatten()
+          looper.flatten()
           transforms.suppressor.stop()
           transforms.selector.stop()
         }
@@ -139,11 +166,11 @@ module.exports = function(opts){
     undo: function(value){
       if (value){
         if (shiftHeld){ // halve loopLength
-          var current = self.loopLength() || 1
-          self.loopLength.set(current/2)
+          var current = obs.loopLength() || 1
+          obs.loopLength.set(current/2)
           this.flash(stateLights.green, 100)
         } else {
-          self.undo()
+          looper.undo()
           this.flash(stateLights.red, 100)
           buttons.store.flash(stateLights.red)
         }
@@ -153,11 +180,11 @@ module.exports = function(opts){
     redo: function(value){
       if (value){
         if (shiftHeld){ // double loopLength
-          var current = self.loopLength() || 1
-          self.loopLength.set(current*2)
+          var current = obs.loopLength() || 1
+          obs.loopLength.set(current*2)
           this.flash(stateLights.green, 100)
         } else {
-          self.redo()
+          looper.redo()
           this.flash(stateLights.red, 100)
           buttons.store.flash(stateLights.red)
         }
@@ -234,7 +261,7 @@ module.exports = function(opts){
 
   // light up store button when transforming (flatten mode)
   var releaseFlattenLight = null
-  watch(self.transforms, function(values){
+  watch(looper.transforms, function(values){
     if (values.length && !releaseFlattenLight){
       releaseFlattenLight = buttons.flatten.light(stateLights.greenLow)
     } else if (releaseFlattenLight){
@@ -257,8 +284,8 @@ module.exports = function(opts){
 
   // repeater
   var releaseRepeatLight = null
-  mapWatchDiff(repeatStates, repeatButtons, self.repeatLength.set)
-  watch(self.repeatLength, function(value){
+  mapWatchDiff(repeatStates, repeatButtons, obs.repeatLength.set)
+  watch(obs.repeatLength, function(value){
     var button = repeatButtons[repeatStates.indexOf(value)]
     if (button){
       if (releaseRepeatLight) releaseRepeatLight()
@@ -277,8 +304,8 @@ module.exports = function(opts){
   var releaseBeatLight = null
   var currentBeat = null
 
-  watch(self.loopPosition, function(value){
-    var index = Math.floor(value / self.loopLength() * 8)
+  watch(loopGrid.loopPosition, function(value){
+    var index = Math.floor(value[0] / value[1] * 8)
     if (index != currentBeat){
       var button = repeatButtons[index]
       if (button){
@@ -290,17 +317,16 @@ module.exports = function(opts){
     }
   })
 
-  // cleanup / disconnect from midi on destroy
-  self._releases.push(
-    turnOffAllLights,
-    portHolder.destroy,
-    output.destroy
-  )
+  // cleanup / disconnect from keyboard on destroy
 
-  return self
+  obs.destroy = function(){
+    turnOffAllLights()
+    portHolder.destroy()
+    output.destroy()
+    loopGrid.destroy()
+  }
 
-
-
+  return obs
 
   // scoped
 

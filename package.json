@@ -7,7 +7,7 @@
     "array-grid": "^1.3.0",
     "deep-equal": "^0.2.1",
     "ditty-grid-stream": "^1.1.0",
-    "loop-grid": "^3.1.0",
+    "loop-grid": "^4.0.0",
     "loop-grid-holder": "^1.0.0",
     "loop-grid-mover": "^1.0.0",
     "loop-grid-repeater": "^1.0.0",
@@ -17,7 +17,9 @@
     "observ-array": "^3.0.0",
     "observ-grid": "^2.8.0",
     "observ-grid-stack": "^2.0.0",
-    "observ-midi": "^1.5.0"
+    "observ-midi": "^1.5.0",
+    "observ-struct": "^6.0.0",
+    "observ-varhash": "^1.0.4"
   },
   "devDependencies": {},
   "scripts": {
