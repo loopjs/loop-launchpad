@@ -302,18 +302,25 @@ module.exports = function(context){
 
   // visual metronome / loop position
   var releaseBeatLight = null
+  var currentBeatLight = null
   var currentBeat = null
 
   watch(loopGrid.loopPosition, function(value){
+    var beat = Math.floor(value[0])
     var index = Math.floor(value[0] / value[1] * 8)
-    if (index != currentBeat){
-      var button = repeatButtons[index]
+    var button = repeatButtons[index]
+
+    if (index != currentBeatLight){
       if (button){
         releaseBeatLight&&releaseBeatLight()
         releaseBeatLight = button.light(stateLights.greenLow, 0)
-        button.flash(stateLights.green)
       }
-      currentBeat = index
+      currentBeatLight = index
+    }
+
+    if (beat != currentBeat){
+      button.flash(stateLights.green)
+      currentBeat = beat
     }
   })
 
