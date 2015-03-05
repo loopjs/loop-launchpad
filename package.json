@@ -14,6 +14,7 @@
     "loop-grid-selector": "^1.1.0",
     "loop-grid-suppressor": "^1.0.0",
     "midi-port-holder": "^2.0.0",
+    "observ": "^0.2.0",
     "observ-array": "^3.0.0",
     "observ-grid": "^2.8.0",
     "observ-grid-stack": "^2.0.0",
